@@ -10,7 +10,7 @@ using namespace std;
 #define PI 3.1415926535897932384626433832795
 #define STEP 100
 
-float angel = -1;
+float angel = 0;
 vector<pair<float,float> > tocke;
 const double Xmin = -1.0, Xmax = 1.0;
 const double Ymin = -1.0, Ymax = 1.0;
@@ -31,6 +31,8 @@ void myKeyboardFunc( unsigned char key, int x, int y )
     switch ( key ) {
     case 27:
         exit(1);
+    case 's':
+        glutPostRedisplay();  
     }
 }
 
@@ -48,12 +50,12 @@ void findRadius(void)
 
 void beginPoint()
 {
-    float x = -tocke[1].first + tocke[2].first;
-    float y = -tocke[1].second + tocke[2].second;
+    float x = tocke[1].first ;//+ tocke[2].first;
+    float y = tocke[1].second ;//+ tocke[2].second;
 
-    float k = y/x;
-
-    float t = atan(k);
+    float k = -y/x;
+    float ks = radiusBasicCircle/radiusRotateCircle;
+    float t = atan(k) -  2*PI/(180*ks);;
     printf("%f\n",k );
 }
 
@@ -121,14 +123,14 @@ void display(void)
             for(double i = 0; i < 2 * PI; i += PI / STEP) 
                     glVertex3f(cos(i) * radiusBasicCircle + centerBasicCircle.first, sin(i) * radiusBasicCircle + centerBasicCircle.second, 0.0);
         glEnd();
-        angel = float((angel) + 1);
-        t = t + PI/180;
+        angel = float((angel) + 2);
         float ks = radiusBasicCircle/radiusRotateCircle;
+        t = t + 2*PI/(180*ks);
         float r = radiusRotateCircle;
         pair<float,float> vr = centerBasicCircle;
         epicycloid.push_back(make_pair(r*(ks+1)*cos(t) - r*cos((ks+1)*t) + vr.first,r*(ks+1)*sin(t) - r*sin((ks+1)*t)+vr.second));
         glTranslatef( centerBasicCircle.first, centerBasicCircle.second, 0.0 );
-        glRotatef( angel, 0.0, 0.0, 1.0 );
+        glRotatef( angel/ks, 0.0, 0.0, 1.0 );
         glTranslatef( -centerBasicCircle.first, -centerBasicCircle.second, 0.0 );
         glBegin(GL_LINE_LOOP);
             for(double i = 0; i < 2 * PI; i += PI / STEP) 
@@ -150,8 +152,8 @@ void display(void)
     glFlush();
     glutSwapBuffers();
 
-    if(tocke.size() == 3)
-        glutPostRedisplay();
+    /*if(tocke.size() == 3)
+        glutPostRedisplay();*/
 }
 
 void init() {
