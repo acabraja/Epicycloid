@@ -12,19 +12,19 @@ using namespace std;
 
 float angel = 0;
 vector<pair<float,float> > tocke;
-const double Xmin = -1.0, Xmax = 1.0;
-const double Ymin = -1.0, Ymax = 1.0;
-int WindowHeight = 700;
-int WindowWidth = 700;
-double radiusBasicCircle = 0;
-double radiusRotateCircle = 0;
 pair<float,float> centerBasicCircle;
 pair<float,float> centerRotateCircle;
 pair<float,float> forRadius;
+double radiusBasicCircle = 0;
+double radiusRotateCircle = 0;
 vector<pair<float,float> > epicycloid;
+double Xmin = -1.0, Xmax = 1.0;
+double Ymin = -1.0, Ymax = 1.0;
+int WindowHeight = 700;
+int WindowWidth = 700;
 int xP = 300, yP = 100;
-double windowXmin, windowXmax, windowYmin, windowYmax;
-float t;
+float t = 0;
+bool forStart = false;
 
 void myKeyboardFunc( unsigned char key, int x, int y )
 {
@@ -32,7 +32,10 @@ void myKeyboardFunc( unsigned char key, int x, int y )
     case 27:
         exit(1);
     case 's':
-        glutPostRedisplay();  
+    {
+        forStart = true;
+        glutPostRedisplay();
+    }
     }
 }
 
@@ -48,45 +51,82 @@ void findRadius(void)
         (centerRotateCircle.second - forRadius.second)*(centerRotateCircle.second - forRadius.second));
 }
 
-void beginPoint()
+float beginPoint()
 {
-    float x = tocke[1].first ;//+ tocke[2].first;
-    float y = tocke[1].second ;//+ tocke[2].second;
+    float x = tocke[1].first - tocke[0].first;
+    float y = tocke[1].second - tocke[0].second;
 
-    float k = -y/x;
+    float k = y/x;
     float ks = radiusBasicCircle/radiusRotateCircle;
-    float t = atan(k) -  2*PI/(180*ks);;
-    printf("%f\n",k );
+    return  atan(k)*180/PI;
 }
 
-void myMouseFunc( int button, int state, int x, int y ) 
+void myMouseFunc( int button, int state, int x, int y )
 {
-    if ( button == GLUT_LEFT_BUTTON && state == GLUT_DOWN && tocke.size() < 3) 
+    if ( button == GLUT_LEFT_BUTTON && state == GLUT_DOWN && tocke.size() < 2)
     {
-        float xPos = float( x )/(GLfloat)WindowWidth ;
-        float yPos = 1-float( y )/(GLfloat)WindowHeight; 
+        float xPos = Xmin + (Xmax-Xmin)*(float)x/(float)(WindowWidth - 1);
+        float yPos = Ymax - (Ymax-Ymin)*(float)y/(float)(WindowHeight - 1);
+        tocke.push_back(make_pair(xPos, yPos));
+        glutPostRedisplay();
 
-        tocke.push_back(make_pair(xPos, yPos)); 
-        glutPostRedisplay();   
-
-        if( tocke.size() == 3)
+        if( tocke.size() == 2)
         {
+            float x = tocke[1].first - tocke[0].first;
+            float y = tocke[1].second - tocke[0].second;
+            float k = y/x;
+            float pomX, pomY;
+            if(tocke[0].first < tocke[1].first)
+            {
+                pomX = tocke[1].first + 0.1;
+                pomY = k*0.1+tocke[1].second;
+            }
+            if(tocke[0].first > tocke[1].first)
+            {
+                pomX = tocke[1].first - 0.1;
+                pomY = -k*0.1+tocke[1].second;
+            }
+            tocke.push_back(make_pair(pomX,pomY));
+            glutPostRedisplay();
             findRadius();
-            beginPoint();
         }
     }
 }
 
 void resizeWindow(int w, int h)
 {
+    double scale, center;
+    double windowXmin, windowXmax, windowYmin, windowYmax;
+
+    glViewport( 0, 0, w, h );
+    w = (w==0) ? 1 : w;
+    h = (h==0) ? 1 : h;
     WindowWidth = w;
     WindowHeight = h;
-    glViewport(0, 0, w, h);
-    glMatrixMode(GL_PROJECTION);
+    if ( (Xmax-Xmin)/w < (Ymax-Ymin)/h ) {
+        scale = ((Ymax-Ymin)/h)/((Xmax-Xmin)/w);
+        center = (Xmax+Xmin)/2;
+        windowXmin = center - (center-Xmin)*scale;
+        windowXmax = center + (Xmax-center)*scale;
+        windowYmin = Ymin;
+        windowYmax = Ymax;
+    }
+    else {
+        scale = ((Xmax-Xmin)/w)/((Ymax-Ymin)/h);
+        center = (Ymax+Ymin)/2;
+        windowYmin = center - (center-Ymin)*scale;
+        windowYmax = center + (Ymax-center)*scale;
+        windowXmin = Xmin;
+        windowXmax = Xmax;
+    }
+
+    glMatrixMode( GL_PROJECTION );
     glLoadIdentity();
-    glOrtho(0, 1, 0, 1, -1, 1);
-    glMatrixMode(GL_MODELVIEW);
-    glLoadIdentity();
+    glOrtho( windowXmin, windowXmax, windowYmin, windowYmax, -1, 1 );
+    Xmax = windowXmax;
+    Xmin = windowXmin;
+    Ymax = windowYmax;
+    Ymin = windowYmin;
 }
 
 void coord(void)
@@ -94,23 +134,27 @@ void coord(void)
     glColor3f(0.4,0.4,0.4);
 
     glBegin(GL_LINES);
-        glVertex2f(0.0, 1);
-        glVertex2f(0.0, -1);
-        glVertex2f(1, 0.0);
-        glVertex2f(-1, 0.0);
+        glVertex2f(0.0, Ymax);
+        glVertex2f(0.0, Ymin);
+        glVertex2f(Xmax, 0.0);
+        glVertex2f(Xmin, 0.0);
     glEnd();
 }
 
 void display(void)
 {
     glClear (GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    //coord();
+    coord();
     glPointSize(4);
     glColor3f(1.0,1.0,0.0);
 
-    if(tocke.size() < 3)
+    if(tocke.size() <= 3 && forStart == false)
     {
         glBegin(GL_POINTS);
+            for(int i = 0; i < tocke.size(); i++)
+                glVertex2f(tocke[i].first,tocke[i].second);
+        glEnd();
+        glBegin(GL_LINE_STRIP);
             for(int i = 0; i < tocke.size(); i++)
                 glVertex2f(tocke[i].first,tocke[i].second);
         glEnd();
@@ -120,47 +164,80 @@ void display(void)
     {
         glMatrixMode( GL_MODELVIEW );
         glBegin(GL_LINE_LOOP);
-            for(double i = 0; i < 2 * PI; i += PI / STEP) 
+            for(double i = 0; i < 2 * PI; i += PI / STEP)
                     glVertex3f(cos(i) * radiusBasicCircle + centerBasicCircle.first, sin(i) * radiusBasicCircle + centerBasicCircle.second, 0.0);
         glEnd();
-        angel = float((angel) + 2);
-        float ks = radiusBasicCircle/radiusRotateCircle;
-        t = t + 2*PI/(180*ks);
-        float r = radiusRotateCircle;
-        pair<float,float> vr = centerBasicCircle;
-        epicycloid.push_back(make_pair(r*(ks+1)*cos(t) - r*cos((ks+1)*t) + vr.first,r*(ks+1)*sin(t) - r*sin((ks+1)*t)+vr.second));
-        glTranslatef( centerBasicCircle.first, centerBasicCircle.second, 0.0 );
-        glRotatef( angel/ks, 0.0, 0.0, 1.0 );
-        glTranslatef( -centerBasicCircle.first, -centerBasicCircle.second, 0.0 );
+        if(forStart)
+        {
+            angel = float((angel) + 2);
+            float ks = radiusBasicCircle/radiusRotateCircle;
+            t = t + 2*PI/(180*ks);
+            float r = radiusRotateCircle;
+            pair<float,float> vr = centerBasicCircle;
+            epicycloid.push_back(make_pair(r*(ks+1)*cos(t) - r*cos((ks+1)*t) + vr.first ,r*(ks+1)*sin(t) - r*sin((ks+1)*t)+vr.second));
+            glTranslatef( centerBasicCircle.first, centerBasicCircle.second, 0.0 );
+            glRotatef( angel/ks, 0.0, 0.0, 1.0 );
+            glTranslatef( -centerBasicCircle.first, -centerBasicCircle.second, 0.0 );
+        }
         glBegin(GL_LINE_LOOP);
-            for(double i = 0; i < 2 * PI; i += PI / STEP) 
+            for(double i = 0; i < 2 * PI; i += PI / STEP)
                     glVertex3f(cos(i) * radiusRotateCircle + centerRotateCircle.first, sin(i) * radiusRotateCircle + centerRotateCircle.second, 0.0);
         glEnd();
-        glTranslatef( centerRotateCircle.first, centerRotateCircle.second, 0.0 );
-        glRotatef( angel, 0.0, 0.0, 1.0 );
-        glTranslatef( -centerRotateCircle.first, -centerRotateCircle.second, 0.0 );
-        glBegin(GL_LINES);
-            glVertex2f(centerRotateCircle.first,centerRotateCircle.second);
-            glVertex2f(forRadius.first,forRadius.second);
-        glEnd();
+        if(forStart)
+        {
+            glTranslatef( centerRotateCircle.first, centerRotateCircle.second, 0.0 );
+            glRotatef( angel, 0.0, 0.0, 1.0 );
+            glTranslatef( -centerRotateCircle.first, -centerRotateCircle.second, 0.0 );
+            glBegin(GL_LINES);
+                glVertex2f(centerRotateCircle.first,centerRotateCircle.second);
+                glVertex2f(forRadius.first,forRadius.second);
+            glEnd();
+            glLoadIdentity();
+            glTranslatef( centerBasicCircle.first, centerBasicCircle.second, 0.0 );
+            glRotatef( beginPoint(), 0.0, 0.0, 1.0 );
+            glTranslatef( -centerBasicCircle.first, -centerBasicCircle.second, 0.0 );
+            glBegin(GL_LINE_STRIP);
+                for(int k = 0; k < epicycloid.size(); k++)
+                    glVertex2f(epicycloid[k].first,epicycloid[k].second);
+            glEnd();
+        }
         glLoadIdentity();
-        glBegin(GL_LINE_STRIP);
-            for(int k = 0; k < epicycloid.size(); k++)
-                glVertex2f(epicycloid[k].first,epicycloid[k].second);
-        glEnd();
     }
     glFlush();
     glutSwapBuffers();
 
-    if(tocke.size() == 3)
+    /*if(tocke.size() == 3)
         glutPostRedisplay();
-}
+*/}
 
 void init() {
     glClearColor( 0.0f, 0.0f, 0.0f, 0.0f );
-    /*glMatrixMode(GL_PROJECTION);
-    glLoadIdentity();
-    glOrtho(-5.0, 5.0, -5.0, 5.0, -1.0, 1.0);*/
+}
+
+void Motion(int x, int y)
+{
+    float eps = 0.01;
+    float xPos = Xmin + (Xmax-Xmin)*(float)x/(float)(WindowWidth - 1);
+    float yPos = Ymax - (Ymax-Ymin)*(float)y/(float)(WindowHeight - 1); 
+
+    float sx = xPos- tocke[0].first;
+    float sy = yPos - tocke[0].second;
+    float k = sy/sx;
+    
+    float pomRadius = sqrt((xPos - tocke[0].first)*(xPos - tocke[0].first) + (yPos - tocke[0].second)*(yPos - tocke[0].second));
+
+    int i = 2;
+    if(pomRadius > radiusBasicCircle)
+    {
+        tocke[i].first=xPos; 
+        tocke[i].second=yPos; 
+    }
+                  
+    if(!forStart)
+    {
+        findRadius();         
+        glutPostRedisplay();
+    }
 }
 
 int main( int argc, char** argv )
@@ -173,6 +250,7 @@ int main( int argc, char** argv )
     init();
     glutKeyboardFunc( myKeyboardFunc );
     glutMouseFunc(myMouseFunc);
+    glutMotionFunc(Motion);
     glutReshapeFunc( resizeWindow );
     glutDisplayFunc( display);
     glutMainLoop(  );
