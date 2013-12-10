@@ -8,7 +8,8 @@
 using namespace std;
 
 #define PI 3.1415926535897932384626433832795
-#define STEP 100
+#define STEP 30
+#define SPEED 2
 
 float angel = 0;
 vector<pair<float,float> > tocke;
@@ -25,17 +26,20 @@ int WindowWidth = 700;
 int xP = 300, yP = 100;
 float t = 0;
 bool forStart = false;
+bool run = false;
 
 void myKeyboardFunc( unsigned char key, int x, int y )
 {
-    switch ( key ) {
-    case 27:
-        exit(1);
-    case 's':
+    switch ( key ) 
     {
-        forStart = true;
-        glutPostRedisplay();
-    }
+        case 27:
+            exit(1);
+        case 's':
+        {
+            run = true;
+            forStart = true;
+            glutPostRedisplay();
+        }
     }
 }
 
@@ -163,15 +167,15 @@ void display(void)
     if(tocke.size() == 3)
     {
         glMatrixMode( GL_MODELVIEW );
-        glBegin(GL_LINE_LOOP);
+        glBegin(GL_POLYGON);
             for(double i = 0; i < 2 * PI; i += PI / STEP)
                     glVertex3f(cos(i) * radiusBasicCircle + centerBasicCircle.first, sin(i) * radiusBasicCircle + centerBasicCircle.second, 0.0);
         glEnd();
         if(forStart)
         {
-            angel = float((angel) + 2);
+            angel = float((angel) + SPEED);
             float ks = radiusBasicCircle/radiusRotateCircle;
-            t = t + 2*PI/(180*ks);
+            t = t + SPEED*PI/(180*ks);
             float r = radiusRotateCircle;
             pair<float,float> vr = centerBasicCircle;
             epicycloid.push_back(make_pair(r*(ks+1)*cos(t) - r*cos((ks+1)*t) + vr.first ,r*(ks+1)*sin(t) - r*sin((ks+1)*t)+vr.second));
@@ -196,6 +200,7 @@ void display(void)
             glTranslatef( centerBasicCircle.first, centerBasicCircle.second, 0.0 );
             glRotatef( beginPoint(), 0.0, 0.0, 1.0 );
             glTranslatef( -centerBasicCircle.first, -centerBasicCircle.second, 0.0 );
+            glColor3f(0.0,1.0,1.0);
             glBegin(GL_LINE_STRIP);
                 for(int k = 0; k < epicycloid.size(); k++)
                     glVertex2f(epicycloid[k].first,epicycloid[k].second);
@@ -206,9 +211,9 @@ void display(void)
     glFlush();
     glutSwapBuffers();
 
-    /*if(tocke.size() == 3)
+    if(run == true)
         glutPostRedisplay();
-*/}
+}
 
 void init() {
     glClearColor( 0.0f, 0.0f, 0.0f, 0.0f );
@@ -216,24 +221,24 @@ void init() {
 
 void Motion(int x, int y)
 {
-    float eps = 0.01;
+    float eps = 0.0000001;
     float xPos = Xmin + (Xmax-Xmin)*(float)x/(float)(WindowWidth - 1);
     float yPos = Ymax - (Ymax-Ymin)*(float)y/(float)(WindowHeight - 1); 
 
     float sx = xPos- tocke[0].first;
     float sy = yPos - tocke[0].second;
     float k = sy/sx;
-    
+    sx = tocke[1].first- tocke[0].first;
+    sy = tocke[1].second - tocke[0].second;
     float pomRadius = sqrt((xPos - tocke[0].first)*(xPos - tocke[0].first) + (yPos - tocke[0].second)*(yPos - tocke[0].second));
 
     int i = 2;
-    if(pomRadius > radiusBasicCircle)
+    if(/*(sy/sx - k < eps) && */pomRadius > radiusBasicCircle)
     {
         tocke[i].first=xPos; 
         tocke[i].second=yPos; 
     }
-                  
-    if(!forStart)
+    if(forStart == false)
     {
         findRadius();         
         glutPostRedisplay();
