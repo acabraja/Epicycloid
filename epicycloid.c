@@ -152,8 +152,8 @@ void display(void)
     glFlush();
     glutSwapBuffers();
 
-    /*if(tocke.size() == 3)
-        glutPostRedisplay();*/
+    if(tocke.size() == 3)
+        glutPostRedisplay();
 }
 
 void init() {
